@@ -1,5 +1,6 @@
 constructESD <- function(location,plot=TRUE,
                          get.data="data(esdsummary,envir=environment())",
+                         gridded="data(gridded.c,envir=environment())",
                          mfrow=c(2,2)) {
   
   if (is.character(get.data)) eval(parse(text=get.data)) else
@@ -8,13 +9,37 @@ constructESD <- function(location,plot=TRUE,
   yr <- esdsummary$X + esdsummary$X.0
 
 #  print(location)
-  imatch <- is.element(esdsummary$locations,location)
+  if (is.character(location)) {
+    imatch <- is.element(esdsummary$locations,location)
 #  print(summary(esdsummary)); print(sum(imatch))
-  lon <- esdsummary$lons[imatch]
-  lat <- esdsummary$lats[imatch]
-  alt <- esdsummary$alts[imatch]
-  ele <- esdsummary$eles[imatch]
-  coefs <- esdsummary$coefs[imatch,,,]
+    lon <- esdsummary$lons[imatch]
+    lat <- esdsummary$lats[imatch]
+    alt <- esdsummary$alts[imatch]
+    ele <- esdsummary$eles[imatch]
+    coefs <- esdsummary$coefs[imatch,,,]
+    fromgrid <- FALSE
+  } else if (is.list(location)) {
+    lon <- location[[1]]
+    lat <- location[[2]]
+    location <- paste(location[[1]],"E/",location[[2]],"N")
+    ele <- esdsummary$eles[1]
+    eval(parse(text=gridded))
+    nx <- length(attributes(gridded.c)$longitudes)
+    ny <- length(attributes(gridded.c)$latitudes)
+    ix <- min( (1:nx)[attributes(gridded.c)$longitudes >= lon] )
+    lon <- attributes(gridded.c)$longitudes[ix]
+    iy <- min( (1:ny)[attributes(gridded.c)$latitudes >= lat] )
+    #print(attributes(gridded.c)$latitudes)
+    lat <- attributes(gridded.c)$latitudes[iy]
+    coefs <- gridded.c[ix,iy,]
+    a <- attributes(gridded.c)$type
+    dim(coefs) <- c(6,3,4)
+    dim(a) <- c(6,3,4)
+    attr(coefs,'type') <- a
+    #print(coefs)
+    #print(c(lon,lat))
+    fromgrid <- TRUE
+  }
 #  print(ele); print(dim(coefs))
   if (plot) par(mfrow=mfrow)
   # print("constructESD"); print(dim(coefs)); print(c(coefs))
@@ -44,6 +69,8 @@ constructESD <- function(location,plot=TRUE,
               c(fit.q05,reverse(fit.q95)),lty=2,lwd=1,col=coluns,border="grey")
       lines(yr,fit.mean,lty=1,lwd=7,col=coltrn)
     }
+    if (fromgrid) mtext(gridded,4,cex=0.7)
+
   }
   results <- list(year=yr,q05=q05,ave=ave,q95=q95)
   invisible(results)
@@ -52,19 +79,46 @@ constructESD <- function(location,plot=TRUE,
 
 
 
-pdfESD <- function(location,plot=TRUE,get.data="data(esdsummary,envir=environment())",
+
+pdfESD <- function(location,plot=TRUE,
+                   get.data="data(esdsummary,envir=environment())",
+                   gridded="data(gridded.c,envir=environment())",
                    year=2050,ref=NULL,mfrow=c(2,2),what="pdf") {
   if (is.character(get.data)) eval(parse(text=get.data)) else
                               esdsummary <- get.data
 #  print(location)
-  imatch <- is.element(esdsummary$locations,location)
+  if (is.character(location)) {
+    imatch <- is.element(esdsummary$locations,location)
 #  print(summary(esdsummary)); print(sum(imatch))
-  lon <- esdsummary$lons[imatch]
-  lat <- esdsummary$lats[imatch]
-  alt <- esdsummary$alts[imatch]
-  ele <- esdsummary$eles[imatch]
-  coefs <- esdsummary$coefs[imatch,,,]
-    if (is.null(ref)) {
+    lon <- esdsummary$lons[imatch]
+    lat <- esdsummary$lats[imatch]
+    alt <- esdsummary$alts[imatch]
+    ele <- esdsummary$eles[imatch]
+    coefs <- esdsummary$coefs[imatch,,,]
+  } else if (is.list(location)) {
+    lon <- location[[1]]
+    lat <- location[[2]]
+    location <- paste(location[[1]],"N/",location[[2]],"E")
+    ele <- esdsummary$eles[1]
+    eval(parse(text=gridded))
+    nx <- length(attributes(gridded.c)$longitudes)
+    ny <- length(attributes(gridded.c)$latitudes)
+    ix <- min( (1:nx)[attributes(gridded.c)$longitudes >= lon] )
+    lon <- attributes(gridded.c)$longitudes[ix]
+    iy <- min( (1:ny)[attributes(gridded.c)$latitudes >= lat] )
+    #print(attributes(gridded.c)$latitudes)
+    lat <- attributes(gridded.c)$latitudes[iy]
+    coefs <- gridded.c[ix,iy,]
+    a <- attributes(gridded.c)$type
+    dim(coefs) <- c(6,3,4)
+    dim(a) <- c(6,3,4)
+    attr(coefs,'type') <- a
+    #print(coefs)
+    #print(c(lon,lat))
+    fromgrid <- TRUE
+  }
+    
+  if (is.null(ref)) {
     now <- date()
     ref <- as.integer(substr(now,21,24))
   }
@@ -114,6 +168,7 @@ pdfESD <- function(location,plot=TRUE,get.data="data(esdsummary,envir=environmen
               lty=1,lwd=7,col=coltrn)
       }
     }
+    if (fromgrid & plot) mtext(gridded,4,cex=0.7)
   }
   results <- list(ave=fit.mean.x,std=SD.x,ave.ref=fit.mean.0,std=SD.0)
   invisible(results)  
@@ -183,7 +238,7 @@ KrigFields <- function(resid,lon.grd,lat.grd) {
 
 KrigSgeostat <- function(resid,lon.grd,lat.grd,do.km) {
   print("Kriging based on 'sgeodat'")
-  regiure(sgeostat)
+  require(sgeostat)
   print("Apply kriging to the residual...")
 
   z.point<-point(resid)
@@ -251,7 +306,7 @@ print("geo.inf:")
 # Distance from coast:
 
 print("Load geo-data...")
-data(addland,envir=environment())
+data(addland1,envir=environment())
 
 print("etopo5...")
 if (file.exists("data/etopo5.Rdata")) load("data/etopo5.Rdata") else
@@ -363,6 +418,7 @@ dist.grd <- rep(NA,np); xkm.grd <- dist.grd; ykm.grd <- dist.grd
 
 lat.grd <- t(matrix(rep(lat.z,nx),ny,nx)); lat.grd <- lat.grd[land]
 lon.grd <- matrix(rep(lon.z,ny),nx,ny); lon.grd <- lon.grd[land]
+print(paste("dim(lon.grd)=",dim(lon.grd)[1],dim(lon.grd)[2]))
 
 lons <- lon.grd[land]; lats <- lat.grd[land]; dist <- dist.grd[land]
 print(paste("Distance # data points =",sum(land)))
@@ -397,7 +453,6 @@ if (do.km) {
   lon.grd <- xkm.grd
 }
 
-print("dist.grd")
 map[land] <- map[land] + dist.grd*coefs[3] + log(dist.grd)*coefs[6] + sqrt(dist.grd)*coefs[7]
 if (plot) {
   image(lon.z,lat.z,map,main="Constant+alt+dist",col=topo.colors(100))
@@ -407,7 +462,6 @@ if (plot) {
   points(g.obj$lon,g.obj$lat,pch=20,cex=1.2,col="white")
   points(g.obj$lon,g.obj$lat,pch=20,cex=0.9,col="black")
 }
-print("lat.grd")
 map[land] <- map[land] + lat.grd*coefs[4]
 
 if (plot) {
@@ -418,7 +472,6 @@ if (plot) {
   points(g.obj$lon,g.obj$lat,pch=20,cex=1.2,col="white")
   points(g.obj$lon,g.obj$lat,pch=20,cex=0.9,col="black")
 }
-print("lon.grd")
 map[land] <- map[land] + lon.grd*coefs[5]
 
 if (plot) {
@@ -432,6 +485,11 @@ if (plot) {
 
   dev.copy2eps(file="geo.inf_GRM-wo-krig.eps")
 }
+
+print(paste("geo.inf [esd4all]: length(dist.grd)=",length(dist.grd),
+            "length(map)=",length(map),"sum(land)=",sum(land),
+            "length(lat.grd)=",length(lat.grd),"length(lon.grd)=",length(lon.grd),
+            "length(alt.grd)=",length(alt.grd),"nx=",nx,"ny=",ny))
 
 geo.dat <- data.frame(dist=dist.grd,lat=lat.grd,lon=lon.grd,
                       alt=alt.grd,log.dist=log(dist.grd),sqrt.dist=sqrt(dist.grd))
@@ -593,7 +651,7 @@ geo.inf <- list(x=lon.z,y=lat.z,z=z,
                 model=geo.mod,x.scale=x.scale,
                 lon.reference=mlon,lat.reference=mlat,R2=summary(geo.mod)$r.squared)
 print(summary(geo.inf))
-rm(topo,lon.z,lat.z)
+rm(topo,lon.z,lat.z); gc(reset=TRUE)
 
 #print(paste("Save 'geo.inf' - grid size=",length(z)))
 #if (krig) save(file="geo.inf_GRM+res-krig.Rdata",geo.inf) else
@@ -657,7 +715,7 @@ gridESD <- function(get.data="data(esdsummary,envir=environment())",plot=FALSE,
   topo <- topo[inlon.z,inlat.z]
   lon.z <- lon.z[inlon.z]
   lat.z <- lat.z[inlat.z]
-  data(addland,envir=environment())
+  data(addland1,envir=environment())
   good <- is.finite(lon.cont) & is.finite(lat.cont)
   lon.cont <- lon.cont[good]
   lat.cont <- lat.cont[good]
@@ -743,7 +801,7 @@ gridESD <- function(get.data="data(esdsummary,envir=environment())",plot=FALSE,
       attr(gridded.c,'latitudes') <- lat.z
       attr(gridded.c,'residual_gridding_method') <- grid.res.method
       attr(gridded.c,'type') <- coef.tag
-      attr(gridded.c,'GRM-R2') <- round(100*GRM.R2) 
+      attr(gridded.c,'GRM.R2') <- round(100*GRM.R2) 
       print(attributes(gridded.c))
       print(colnames(gridded.c))
       save(file=fname,gridded.c)
@@ -761,7 +819,7 @@ gridESD <- function(get.data="data(esdsummary,envir=environment())",plot=FALSE,
 #                   "longname='coefficient ",ic," of 5th-order polynomial fit',",
 #                   "prec='short')",sep="")))
     ic <- ic+1
-    rm(geo)
+    rm(geo); gc(reset=TRUE)
   }
 
   
@@ -776,7 +834,7 @@ gridESD <- function(get.data="data(esdsummary,envir=environment())",plot=FALSE,
   metadef <- var.def.ncdf(name="meta",units="none",dim=dimn, missval="-999", 
         longname="coefficients for 5th-order polynomials", prec="char")
   print("Create netCDF-file")
-  ncnew <- create.ncdf("Europe_E-SDS_t2m-trend_map.nc", list(vardef,metadef))
+  ncnew <- create.ncdf("gridESD.nc", list(vardef,metadef))
   put.var.ncdf( ncnew, vardef, round(gridded.c*100) )
 #  print("Add metadata:")
 #  put.var.ncdf( ncnew, metadef, coef.tag)
@@ -794,6 +852,9 @@ gridESD <- function(get.data="data(esdsummary,envir=environment())",plot=FALSE,
   att.put.ncdf( ncnew, 0, 'residual_gridding_method',grid.res.method)
   att.put.ncdf( ncnew, 0, 'GCM_source','PCMDI - Earth System Grid: URL https://esg.llnl.gov:8443/index.jsp')
   close.ncdf(ncnew)
+
+  gridded.c[gridded.c==-999] <- NA
+  invisible(gridded.c)
 }
 
 
@@ -818,12 +879,12 @@ mapESDquants <- function(what="q95",season=3,year=2050,ref=NULL,
   #print(tags); print(iC); print(selection)
   if (is.character(get.data2)) eval(parse(text=get.data2)) else
                               esdsummary <- get.data2
-  data(addland)
+  data(addland1,envir=environment())
   if (is.null(esdsummary$X.0)) esdsummary$X.0 <- 1900
   X <- year - esdsummary$X.0
   #print(summary(esdsummary))
   d <- dim(gridded.c)
-    map <- matrix(rep(0,d[1]*d[2]),d[1],d[2])
+  map <- matrix(rep(0,d[1]*d[2]),d[1],d[2])
   # print(d); print(iC); print(dim(map)); print(dim(gridded.c[,,iC]))
   map[,] <- gridded.c[,,iC[1]]
   #print("Add all terms")

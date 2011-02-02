@@ -11,6 +11,8 @@
 \alias{mapESDprobs}
 \alias{esdsummary}
 \alias{gridded.c}
+\alias{gridded.ealat.c} 
+\alias{gridded.africa.c}
 \alias{ESDinGoogle}
 \alias{ESDdetails}
 \alias{ESDreference}
@@ -19,14 +21,17 @@
 \alias{figures}
 \alias{KrigFields}
 \alias{KrigSgeostat}
+\alias{grm.coef}
+\alias{grm.coef.africa}
+\alias{grm.coef.ealat}
 \title{Empirical-Statistical Downsacling For All.}
 \description{
   R-package for processing results from empirical-statistical downscaling (ESD). 
 
   The code has been taylored to post-process data
   derived through the \code{clim.pact} (\url{http://cran.r-project.org/web/packages/clim.pact/index.html}) 
-  and \code{met.no} packages (the latter is not posted on CRAN). The package uses the same
-  ESD data as displayed in Google.Earth (\url{http://home.broadpark.no/~rbene/esd.google.earthTemp.kml}).
+  and \code{met.no.REB} packages (the latter is not posted on CRAN). The package uses the same
+  ESD data as displayed in Google.Earth (\url{http://eklima.met.no/metno/esd/esd.google.earthTemp.kmz}).
 
   The R-package assumes that the ESD involves a fairly large multi-model
   ensemble, typically involving 40-50 different simulations. Each
@@ -43,7 +48,11 @@
 \code{esdsummary()} in the \code{met.no}-package. These data consist of
 coefficients of the best-fit polynomials to the 5-, and 95- percentiles as well as
 the mean of the set of time series (1900-2100) of downscaled multi-model
-ensemble (CMIP3). 
+ensemble (CMIP3). \code{data(grm.coef)} gieves the coefficients
+\eqn{c_i}{c_i} from the geographical regression model (GRM) for the
+5th-order polinomial fits to the trends. The 3D matrix holds the
+Estimate Std. Error t value Pr(>|t|) from the summary of the linear
+model - see R-script in exampls for more details. 
 
 \code{constructESD} constructs time series of the 5-, and 95- percentiles as well as
 the mean (1900-2100) of downscaled GCM (e.g from the CMIP3 data
@@ -86,7 +95,9 @@ below/higher then threshold.
 
 \code{esdsummary} contains coefficients describing the polynomials of
 the 5th and 95th percentiles as well as ensemble mean of ESD analysis
-for a large number of locations around the world, seen in \url{http://eklima.met.no/metno/esd/esd.google.earthTemp.kmz}
+for a large number of locations around the world, seen in
+\url{http://eklima.met.no/metno/esd/esd.google.earthTemp.kmz}. The list
+is created using \code{esd2google} in \code{met.no.REB}, available at \url{http://noserc.met.no/grtools/reb.html}.
 
 \code{gridded.c} contains results from gridding the coefficients (stored
 in \code{esdsummary}) over northern Europe.
@@ -96,19 +107,22 @@ in \code{esdsummary}) over northern Europe.
 \code{ESDdetails} provides details about the ESD results and explains how the figures should be interpreted. 
 \code{ESDreference} provides a link to a proper reference for the ESD - Benestad, R.E. (2005) Climate change scenarios for northern Europe from multi-model IPCC AR4 climate simulations GRL, 32  doi:10.1029/2005GL023401 No. 17, L17704.
 
-\code{rsd2cdf} reads the gridded data in an \code{rda}-file and saves
+\code{rda2cdf} reads the gridded data in an \code{rda}-file and saves
 these as a netCDF file. 
 
 \code{figures} Makes figures showing maps of the 95-percentile for
 summer (JJA) mean temperature and probability of below freezing mean
 winter (DJF) temperatures.
-
 }
+
 \usage{
-constructESD(location,plot=TRUE,get.data="data(esdsummary,envir=environment())",
+constructESD(location,plot=TRUE,
+             get.data="data(esdsummary,envir=environment())",
+             gridded="data(gridded.c,envir=environment())",
              mfrow=c(2,2))
 pdfESD(location,plot=TRUE,get.data="data(esdsummary,envir=environment())",
-       year=2050,ref=NULL,mfrow=c(2,2),what="pdf")
+       gridded="data(gridded.c,envir=environment())",year=2050,
+       ref=NULL,mfrow=c(2,2),what="pdf")
 mapESDlocs(get.data="data(esdsummary,envir=environment())")
 queryLocations(nr=NULL,get.data="data(esdsummary,envir=environment())")
 get5mintopo(browser = "firefox", url ="http://marine.rutgers.edu/po/tools/gridpak/etopo5.nc")
@@ -134,17 +148,26 @@ mapESDprobs(thresh=0,season=1,year=2050,ref=NULL,
              get.data="data(gridded.c,envir=environment())",plot=TRUE)
 data(esdsummary)
 data(gridded.c)
+data(gridded.ealat.c)
+data(gridded.africa.c)
+data(grm.coef)
+data(grm.coef.africa)
+data(grm.coef.ealat)
 ESDinGoogle(browser = "firefox", url="http://eklima.met.no/metno/esd/esd.google.earthTemp.kmz") 
 ESDdetails(browser = "firefox", url="http://met.no/Forskning/Publikasjoner/") 
 rda2cdf(get.data="data(gridded.c,envir=environment())")
-figures(get.data="data(gridded.c,envir=environment())")
+figures(get.data="data(gridded.c,envir=environment())",
+                    season.1=3,season.2=1,year=2050,thresh=0,what="q95")
 reduce.rda.size(get.data="data(gridded.c,envir=environment())",reduce.res=TRUE,
-                            nx=100,ny=100)
+                            Nx=100,Ny=100)
 }
 \arguments{
-  \item{location}{Name of site}
+  \item{location}{A string containing the name of site or a list with
+    longitude and latitude (in that order) for reconstruction from
+    gridded data.}
   \item{plot}{flag: TRUE or FALSE}
   \item{get.data}{Method for getting the data}
+  \item{gridded}{Method for getting gridded data}
   \item{year}{Scenario year}
   \item{nr}{Station number}
   \item{browser}{Preferred browser}
@@ -167,23 +190,25 @@ reduce.rda.size(get.data="data(gridded.c,envir=environment())",reduce.res=TRUE,
   \item{ref}{Reference year}
   \item{fname}{File name for \code{gridded.c}.}
   \item{what}{Specification of type}
-  \item{a}{}
-  \item{b}{}
+  \item{a}{A value: a < b returns -1 in \code{fortegn}}
+  \item{b}{A value: a < b returns -1 in \code{fortegn}}
   \item{reduce.res}{TRUE: use \code{interp} to reduce the spatial
     resolution, otherwise save only the land points.}
-  \item{nx}{}
-  \item{ny}{}
-  \item{mfrow}{}
+  \item{mfrow}{see \code{\link{par}}.}
   \item{krig.Nx}{To specify coarser grid for residual gridding}
   \item{krig.Ny}{To specify coarser grid for residual gridding}
   \item{new}{FALSE: try to continue on a previous job}
   \item{season}{Season}
+  \item{season.1}{Season}
+  \item{season.2}{Season}
   \item{get.data1}{Method for getting the data}
   \item{get.data2}{Method for getting the data}
   \item{thresh}{Threshold value for estimating probabilities}
   \item{resid}{List object holding the residuals from GRM}
   \item{lon.grd}{longitude coordinates of grid}
   \item{lat.grd}{Latitude coordinates of grid}
+  \item{Nx}{number of points in x-dimensions}
+  \item{Ny}{number of points in y-dimensions}
 }
 \value{
 }
@@ -198,6 +223,99 @@ constructESD(a[1]) -> b
 pdfESD(a[1])
 mapESDquants() -> map.q95
 mapESDprobs() -> map.pr.T.lt.0
+
+# How to generate the gridded data
+dsjobs(ele=101,scen="sresa1b")
+bestESD()                      # to weed out multiple locations
+allESD(path="ESD/")            # to weed out multiple locations
+esd2google() -> esdsummary     # summarise all the ESD results
+catESDsummary(esdsummary) -> esdsummary.tidy
+gridded.c <- gridESD(get.data=esdsummary.tidy, x.rng=c(-12,45),y.rng=c(35,72),new=TRUE)
+gridded.africa.c <- gridESD(get.data=esdsummary.tidy,x.rng=c(-20,50),y.rng=c(-40,37),new=TRUE)
+gridded.ealat.c <-
+gridESD(get.data=esdsummary.tidy,x.rng=c(15,190),y.rng=c(60,80),new=TRUE)
+
+#How to create the figures in publications:
+figures(get.data="data(gridded.ealat.c,envir=environment())",year=2100,
+        what="mean",thresh=-10,season.1=1)
+file.rename("Gridded_ESD-q95map.nc","EALAT_ESD-meanmap-2100.nc")
+file.rename("Gridded_ESD-p0map.nc","EALAT_ESD-p-10map-2100.nc")
+figures(get.data="data(gridded.ealat.c,envir=environment())",
+        what="mean",thresh=-10,season.1=1)
+file.rename("Gridded_ESD-q95map.nc","EALAT_ESD-meanmap-2050.nc")
+file.rename("Gridded_ESD-p0map.nc","EALAT_ESD-p-10map-2050.nc")
+figures(get.data="data(gridded.ealat.c,envir=environment())",year=2000,
+        what="mean",thresh=-10,season.1=1)
+file.rename("Gridded_ESD-q95map.nc","EALAT_ESD-meanmap-2000.nc")
+file.rename("Gridded_ESD-p0map.nc","EALAT_ESD-p-10map-2000.nc")
+
+constructESD(list(90,70),gridded="data(gridded.ealat.c,envir=environment())")
+pdfESD(list(90,70),gridded="data(gridded.ealat.c,envir=environment())")
+
+figures(get.data="data(gridded.africa.c,envir=environment())",
+        season.1=3,season.2=3,thresh=35)
+file.rename("Gridded_ESD-q95map.nc","Africa_ESD-q95map-2500.nc")
+file.rename("Gridded_ESD-p0map.nc","Africa_ESD-p35map-2500.nc")
+figures(get.data="data(gridded.africa.c,envir=environment())",
+        season.1=3,season.2=3,thresh=35,year=2010)
+file.rename("Gridded_ESD-q95map.nc","Africa_ESD-q95map-2000.nc")
+file.rename("Gridded_ESD-p0map.nc","Africa_ESD-p34map-2000.nc")
+figures(get.data="data(gridded.africa.c,envir=environment())",
+        season.1=3,season.2=3,thresh=35,year=2100)
+file.rename("Gridded_ESD-q95map.nc","Africa_ESD-q95map-2100.nc")
+file.rename("Gridded_ESD-p0map.nc","Africa_ESD-p34map-2100.nc")
+
+figures(year=2100)
+file.rename("Gridded_ESD-q95map.nc","Europe_ESD-q95map-2100.nc")
+file.rename("Gridded_ESD-p0map.nc","Europe_ESD-p0map-2100.nc")
+figures(year=2000)
+file.rename("Gridded_ESD-q95map.nc","Europe_ESD-q95map-2000.nc")
+file.rename("Gridded_ESD-p0map.nc","Europe_ESD-p0map-2000.nc")
+figures()
+file.rename("Gridded_ESD-q95map.nc","Europe_ESD-q95map-2050.nc")
+file.rename("Gridded_ESD-p0map.nc","Europe_ESD-p0map-2050.nc")
+
+
+# Maps for EALAT book:
+
+figures(get.data="data(gridded.ealat.c,envir=environment())",year=1975,
+        what="mean",thresh=-10)
+file.rename("Gridded_ESD-q95map.nc","EALAT_ESD-meanmap-1975.nc")
+file.rename("Gridded_ESD-p0map.nc","EALAT_ESD-p-10map-1975.nc")
+figures(get.data="data(gridded.ealat.c,envir=environment())",year=2085,
+        what="mean",thresh=-10)
+file.rename("Gridded_ESD-q95map.nc","EALAT_ESD-meanmap-2085.nc")
+file.rename("Gridded_ESD-p0map.nc","EALAT_ESD-p-10map-2085.nc")
+
+# Generate tables for adjusted R-squared statistics for the geographical
+# regression model
+library(esd4all)
+data(gridded.c)
+R2 <- attributes(gridded.c)$GRM.R2
+dim(R2) <- c(6,12); R2 <- t(R2)
+colnames(R2) <- paste("c",0:5,sep="_")
+rownames(R2) <- paste(rep(c("mean","q05","q95"),4),
+                      c(rep("DJF",3),rep("MAM",3),rep("JJA",3),rep("SON",3)))
+print(R2)
+
+
+# The papers used ferret (ferret.wrc.noaa.gov/) to make the final plots 
+# based on the netCDF files created... 
+
+
+
+# The following lines were used to reduce the matrix of coefficients for
+# the CRAN-version of the esd4all-package:
+
+
+reduce.rda.size(Nx=50,Ny=50) -> gridded.c
+save(file="gridded.c.reduced.rda",gridded.c)
+reduce.rda.size(get.data="data(gridded.ealat.c,envir=environment())",Nx=50,Ny=50)->
+   gridded.ealat.c
+save(file="gridded.ealat.c.reduced.rda",gridded.ealat.c)
+reduce.rda.size(get.data="data(gridded.africa.c,envir=environment())",Nx=50,Ny=50)->
+   gridded.africa.c
+save(file="gridded.africa.c.reduced.rda",gridded.africa.c)
 }
 }
-\keyword{}
+\keyword{manip}

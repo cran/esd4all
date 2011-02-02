@@ -1,0 +1,15 @@
+e1d7596df74ffc8e8370bd6d73dd2f9c *DESCRIPTION
+7bf677de194ff8cb52e0494ebdb0f6db *INDEX
+06f65a5adfc410e506e516bf580f1bbe *NAMESPACE
+1215800eba0fd5fe19027ba62342c591 *R/constructESD.R
+672e14706f710d0d8a9bbbe98f2e4518 *R/figures.gridESD.R
+9fe5e6ca5818346f944e4709cc80355c *data/datalist
+65cbb9082133e58dc4823dcd5fdc670c *data/esdsummary.rda
+3b5b689f1fac73ab9a89138a000813ad *data/gridded.africa.c.rda
+117b1b5799e6245a7a856cad38394d07 *data/gridded.c.rda
+67f894367f846992192cec7c87f85669 *data/gridded.ealat.c.rda
+8c8ba0bd050223ba16b5d15f1c1260b3 *data/grm.coef.africa.rda
+8ee95f57099941301ef35c9e03e58375 *data/grm.coef.ealat.rda
+dcaaec9cfa5fa48ee0f1588dad5d0be8 *data/grm.coef.rda
+ed05f375cdcf6bb954c6a99fb527b337 *examples/fig-grm-figs.R
+18ebe5e5fb7a46e2527063d077840b9a *man/constructESd.Rd

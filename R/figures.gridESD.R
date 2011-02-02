@@ -1,6 +1,7 @@
-reduce.rda.size <- function(get.data="data(gridded.c,envir=environment())",reduce.res=TRUE,
-                            nx=100,ny=100) {
+reduce.rda.size <- function(get.data="data(gridded.c,envir=environment())",
+                            reduce.res=TRUE,Nx=100,Ny=100) {
   eval(parse(text=get.data))
+  nx <- Nx; ny <- Ny
   d <- dim(gridded.c)
   if (!reduce.res) {
     dim(gridded.c) <- c(d[1]*d[2],d[3])
@@ -79,21 +80,24 @@ rda2cdf <- function(get.data="data(gridded.c,envir=environment())") {
   close.ncdf(ncnew)
 }
 
-figures <- function(get.data="data(gridded.c,envir=environment())") {
+figures <- function(get.data="data(gridded.c,envir=environment())",
+                    season.1=3,season.2=1,year=2050,thresh=0,what="q95") {
 
+  seasons <- c("DJF","MAM","JJA","SON")
   print("Quantiles")
-  mapESDquants(get.data1=get.data) -> map.q95
+  mapESDquants(get.data1=get.data,season=season.1,year=year,what=what) -> map.q95
   print(dim(map.q95))
   dev2bitmap(file="JJA-q95.jpg",type="jpeg",res=200)
+  longname=paste(what,"for",seasons[season.1],"mean T(2m)  in year",year)
   
   lon.z <- attr(map.q95,'longitudes')
   lat.z <- attr(map.q95,'latitudes')
   map.q95[!is.finite(map.q95)] <- -99
   dimlon <- dim.def.ncdf( "lon", "degrees_east", lon.z)
   dimlat <- dim.def.ncdf( "lat", "degrees_north", lat.z)
-  vardef <- var.def.ncdf(name="q95",units="none",dim=list(dimlon,dimlat), missval=-99,
-                       longname="q95 for JJA mean T(2m) in year 2050", prec="short")
-  ncnew <- create.ncdf("Europe_ESD-q95map.nc", vardef)
+  vardef <- var.def.ncdf(name="q95",units="none",dim=list(dimlon,dimlat),
+                         missval=-99,longname=longname, prec="short")
+  ncnew <- create.ncdf("Gridded_ESD-q95map.nc", vardef)
   put.var.ncdf( ncnew, vardef, round(map.q95*10) )
 
   att.put.ncdf( ncnew, vardef, 'scale_factor', 0.1, prec="double")
@@ -113,14 +117,16 @@ figures <- function(get.data="data(gridded.c,envir=environment())") {
   print("Probabilities")
   
 #  mapESDprobs(get.data="load('gridded.c.large.rda')") -> map.p0
-  mapESDprobs(get.data=get.data) -> map.p0
+  mapESDprobs(get.data=get.data,season=season.2,year=year,thresh=thresh) -> map.p0
   dev2bitmap(file="DJF-P-T-lt-0.jpg",type="jpeg",res=200) 
-
+  longname=paste("probability for",seasons[season.2],
+    "mean T(2m) < ",thresh,"in year",year)
+  
   map.p0[!is.finite(map.p0)] <- -90
   print(summary(c(map.p0)))
-  var2def <- var.def.ncdf(name="Pr",units="none",dim=list(dimlon,dimlat), missval=-99,
-                         longname="probability for freezing DJF mean T(2m) in year 2050", prec="short")
-  ncnew2 <- create.ncdf("Europe_ESD-p0map.nc", var2def)
+  var2def <- var.def.ncdf(name="Pr",units="none",dim=list(dimlon,dimlat),
+                          missval=-99,longname=longname,prec="short")
+  ncnew2 <- create.ncdf("Gridded_ESD-p0map.nc", var2def)
   put.var.ncdf( ncnew2, var2def, round(map.p0) )
 
   att.put.ncdf( ncnew2, var2def, 'scale_factor', 1, prec="double")
